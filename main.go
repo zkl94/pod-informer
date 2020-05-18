@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	//"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
@@ -42,7 +43,11 @@ func main() {
 	klog.Info("Setting up event handlers")
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			klog.Info("Pod created")
+			var object metav1.Object
+			//var ok bool
+			object, _ = obj.(metav1.Object)
+			// using default timestamp format
+			klog.Infof("Pod %s created in %s at %s", object.GetName(), object.GetNamespace(), object.GetCreationTimestamp())
 		},
 		DeleteFunc: func(new interface{}) {
 			klog.Info("Pod deleted")
