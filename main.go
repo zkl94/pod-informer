@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
-	//"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -12,7 +11,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 )
 
@@ -35,10 +36,6 @@ func main() {
 	clientset, err := kubernetes.NewForConfig(config)
 	informerFactory := informers.NewSharedInformerFactory(clientset, time.Second*30)
 	podInformer := informerFactory.Core().V1().Pods()
-
-	stopper := make(chan struct{})
-	defer close(stopper)
-	defer runtime.HandleCrash()
 
 	klog.Info("Setting up event handlers")
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -64,11 +61,12 @@ func main() {
 		},
 	})
 
-	go podInformer.Informer().Run(stopper)
-	if !cache.WaitForCacheSync(stopper, podInformer.Informer().HasSynced) {
-		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
-		return
-	}
-
-	<-stopper
+	informerFactory.Start(wait.NeverStop)
+	informerFactory.WaitForCacheSync(wait.NeverStop)
+	// handle stop signal
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+	fmt.Println("\r- Ctrl+C pressed in Terminal")
+	os.Exit(0)
 }
