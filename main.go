@@ -44,13 +44,23 @@ func main() {
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			var object metav1.Object
-			//var ok bool
-			object, _ = obj.(metav1.Object)
-			// using default timestamp format
-			klog.Infof("Pod %s created in %s at %s", object.GetName(), object.GetNamespace(), object.GetCreationTimestamp())
+			var ok bool
+			if object, ok = obj.(metav1.Object); ok {
+				// using default timestamp format
+				klog.Infof("Pod %s created in %s at %s", object.GetName(), object.GetNamespace(), object.GetCreationTimestamp())
+			} else {
+				klog.Info("error processing object of pod AddFunc event")
+			}
 		},
-		DeleteFunc: func(new interface{}) {
-			klog.Info("Pod deleted")
+		DeleteFunc: func(obj interface{}) {
+			var object metav1.Object
+			var ok bool
+			if object, ok = obj.(metav1.Object); ok {
+				// using default timestamp format
+				klog.Infof("Pod %s deleted in %s at %s", object.GetName(), object.GetNamespace(), object.GetCreationTimestamp())
+			} else {
+				klog.Info("error processing object of pod DeleteFunc event")
+			}
 		},
 	})
 
